@@ -10,9 +10,6 @@ export default async function RootPage() {
     redirect('/login');
   }
 
-  if (session.mustChangePw) {
-    redirect('/change-password');
-  }
 
   if (session.role === 'admin') {
     redirect('/admin');

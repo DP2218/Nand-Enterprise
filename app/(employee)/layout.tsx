@@ -8,7 +8,6 @@ export default async function EmployeeLayout({ children }: { children: React.Rea
 
   if (!session) redirect('/login');
   if (session.role !== 'employee') redirect('/admin');
-  if (session.mustChangePw) redirect('/change-password');
 
   return <AppShell role="employee">{children}</AppShell>;
 }

@@ -63,7 +63,7 @@ async function seed() {
     const hash = await bcrypt.hash(user.password, 10);
     const { error } = await supabase
       .from('users')
-      .update({ password_hash: hash })
+      .update({ password_hash: hash, must_change_pw: false })
       .eq('username', user.username);
 
     if (error) {

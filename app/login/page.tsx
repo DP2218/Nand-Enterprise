@@ -42,9 +42,7 @@ export default function LoginPage() {
 
       await refetch();
 
-      if (json.data.mustChangePw) {
-        router.push('/change-password');
-      } else if (json.data.role === 'admin') {
+      if (json.data.role === 'admin') {
         router.push('/admin');
       } else {
         router.push('/employee');

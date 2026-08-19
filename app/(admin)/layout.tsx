@@ -8,7 +8,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!session) redirect('/login');
   if (session.role !== 'admin') redirect('/employee');
-  if (session.mustChangePw) redirect('/change-password');
 
   return <AppShell role="admin">{children}</AppShell>;
 }

@@ -44,10 +44,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Must change password: only allow /change-password
-  if (session.mustChangePw && !matchesPath(pathname, '/change-password')) {
-    return NextResponse.redirect(new URL('/change-password', request.url));
-  }
 
   // Role-based route protection with exact path boundary matching
   const isAdminPath = ADMIN_PATHS.some((p) => matchesPath(pathname, p));

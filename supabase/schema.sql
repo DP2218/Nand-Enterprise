@@ -256,32 +256,32 @@ VALUES
    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- admin123 (bcrypt placeholder - will be replaced via seed script)
    'admin',
    FALSE),
-  -- Employees (password = phone number, must change on first login)
+  -- Employees (password = phone number)
   ('11111111-0001-0001-0001-000000000001',
    'NAND0001',
    '$2a$10$placeholder1111111111111111111111111111111111111111111111', -- 9876543210
    'employee',
-   TRUE),
+   FALSE),
   ('11111111-0002-0002-0002-000000000002',
    'NAND0002',
    '$2a$10$placeholder2222222222222222222222222222222222222222222222', -- 9876543211
    'employee',
-   TRUE),
+   FALSE),
   ('11111111-0003-0003-0003-000000000003',
    'NAND0003',
    '$2a$10$placeholder3333333333333333333333333333333333333333333333', -- 9876543212
    'employee',
-   TRUE),
+   FALSE),
   ('11111111-0004-0004-0004-000000000004',
    'NAND0004',
    '$2a$10$placeholder4444444444444444444444444444444444444444444444', -- 9876543213
    'employee',
-   TRUE),
+   FALSE),
   ('11111111-0005-0005-0005-000000000005',
    'NAND0005',
    '$2a$10$placeholder5555555555555555555555555555555555555555555555', -- 9876543214
    'employee',
-   TRUE);
+   FALSE);
 
 -- NOTE: The placeholder hashes above won't work! Run the seed script below
 -- to generate real bcrypt hashes and update the users table:

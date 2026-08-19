@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       username: employee_number,
       password_hash,
       role: 'employee',
-      must_change_pw: true,
+      must_change_pw: false,
     });
 
     if (userError) {

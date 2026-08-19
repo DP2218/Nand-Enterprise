@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const dbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!dbUrl || dbUrl.includes('your-supabase-project')) {
       return NextResponse.json(
-        { error: 'Supabase credentials not configured in .env.local' },
+        { error: 'Supabase credentials not configured in environment variables (Vercel / .env.local)' },
         { status: 500 }
       );
     }
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     console.error('[login]', err);
     if (err?.message?.includes('fetch failed') || err?.message?.includes('NEXT_PUBLIC_SUPABASE_URL')) {
       return NextResponse.json(
-        { error: 'Cannot connect to Supabase. Please verify credentials in .env.local' },
+        { error: 'Cannot connect to Supabase. Please verify credentials in environment variables.' },
         { status: 500 }
       );
     }
