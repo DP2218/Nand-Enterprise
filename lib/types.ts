@@ -83,6 +83,7 @@ export interface VoiceRecording {
   duration_seconds: number;
   file_size: number;
   recording_type: string;
+  mime_type?: string;
   remarks: string | null;
   created_at: string;
   employee?: Employee;

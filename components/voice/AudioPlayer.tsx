@@ -17,7 +17,7 @@ interface AudioPlayerProps {
 
 export default function AudioPlayer({
   src,
-  fileName = 'recording.webm',
+  fileName = 'recording',
   durationSeconds = 0,
   fileSizeBytes,
   showDownload = false,

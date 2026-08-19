@@ -144,6 +144,7 @@ CREATE TABLE voice_recordings (
   duration_seconds  INTEGER NOT NULL,
   file_size         BIGINT NOT NULL,
   recording_type    TEXT NOT NULL DEFAULT 'daily_update',
+  mime_type         TEXT DEFAULT 'audio/webm',
   remarks           TEXT,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

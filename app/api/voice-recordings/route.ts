@@ -16,7 +16,17 @@ async function ensureBucketExists(supabase: ReturnType<typeof createServerClient
       await supabase.storage.createBucket(BUCKET_NAME, {
         public: false,
         fileSizeLimit: MAX_FILE_SIZE_BYTES,
-        allowedMimeTypes: ['audio/webm', 'audio/webm;codecs=opus', 'audio/ogg', 'audio/mp4', 'audio/wav'],
+        allowedMimeTypes: [
+          'audio/webm',
+          'audio/webm;codecs=opus',
+          'audio/ogg',
+          'audio/mp4',
+          'audio/mp4;codecs=mp4a.40.2',
+          'audio/aac',
+          'audio/x-m4a',
+          'audio/m4a',
+          'audio/wav',
+        ],
       });
     }
   } catch (err) {
@@ -176,10 +186,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename: employeeId_timestamp.webm (e.g., NAND0001_20260819_103000.webm)
+    const formMimeType = formData.get('mime_type')?.toString() || file.type || '';
+    
+    // Derive correct file extension from uploaded file name, mime_type, or file.type
+    let extension = 'webm';
+    if (file.name && file.name.includes('.')) {
+      const extFromFileName = file.name.split('.').pop()?.toLowerCase();
+      if (extFromFileName && ['webm', 'm4a', 'mp4', 'ogg', 'wav', 'aac'].includes(extFromFileName)) {
+        extension = extFromFileName;
+      }
+    } else if (formMimeType.includes('mp4') || formMimeType.includes('aac') || formMimeType.includes('m4a')) {
+      extension = 'm4a';
+    } else if (formMimeType.includes('ogg')) {
+      extension = 'ogg';
+    } else if (formMimeType.includes('wav')) {
+      extension = 'wav';
+    } else if (formMimeType.includes('webm')) {
+      extension = 'webm';
+    }
+
+    // Generate unique filename: employeeId_timestamp.extension (e.g., EMP001_20260819_103000.m4a)
     const now = new Date();
     const timestampStr = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14); // YYYYMMDDHHMMSS
-    const fileName = `${employee.employee_number}_${timestampStr}.webm`;
+    const fileName = `${employee.employee_number}_${timestampStr}.${extension}`;
+
+    const effectiveMimeType = formMimeType || file.type || (extension === 'm4a' ? 'audio/mp4' : 'audio/webm');
 
     await ensureBucketExists(supabase);
 
@@ -191,7 +222,7 @@ export async function POST(request: NextRequest) {
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(fileName, buffer, {
-        contentType: file.type || 'audio/webm',
+        contentType: effectiveMimeType,
         upsert: true,
       });
 
@@ -213,6 +244,7 @@ export async function POST(request: NextRequest) {
         duration_seconds: durationSeconds,
         file_size: file.size,
         recording_type: recordingType,
+        mime_type: effectiveMimeType,
         remarks: remarks,
       })
       .select()

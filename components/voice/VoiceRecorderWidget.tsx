@@ -111,6 +111,54 @@ export default function VoiceRecorderWidget({
     renderFrame();
   }, []);
 
+  const [audioFormat, setAudioFormat] = useState<{ mimeType: string; extension: string } | null>(null);
+
+  // Detect browser supported MIME types with iOS Safari compatibility
+  const detectSupportedAudioMimeType = (): { mimeType: string; extension: string } | null => {
+    if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
+      return null;
+    }
+
+    // Strict priority order: webm/opus -> webm -> mp4 -> mp4a -> fallback types
+    const candidateFormats = [
+      { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
+      { mimeType: 'audio/webm', extension: 'webm' },
+      { mimeType: 'audio/mp4', extension: 'm4a' },
+      { mimeType: 'audio/mp4;codecs=mp4a.40.2', extension: 'm4a' },
+      { mimeType: 'audio/aac', extension: 'm4a' },
+      { mimeType: 'audio/ogg;codecs=opus', extension: 'ogg' },
+      { mimeType: 'audio/wav', extension: 'wav' },
+    ];
+
+    if (typeof MediaRecorder.isTypeSupported === 'function') {
+      for (const format of candidateFormats) {
+        if (MediaRecorder.isTypeSupported(format.mimeType)) {
+          return format;
+        }
+      }
+    }
+
+    // Fallback: check if MediaRecorder works without explicit options
+    try {
+      const dummyStream = new MediaStream();
+      const testRecorder = new MediaRecorder(dummyStream);
+      const defaultMime = testRecorder.mimeType || '';
+      if (defaultMime.includes('mp4') || defaultMime.includes('aac')) {
+        return { mimeType: defaultMime, extension: 'm4a' };
+      }
+      if (defaultMime.includes('webm')) {
+        return { mimeType: defaultMime, extension: 'webm' };
+      }
+      if (defaultMime) {
+        return { mimeType: defaultMime, extension: 'm4a' };
+      }
+    } catch {
+      // MediaRecorder instantiation failed
+    }
+
+    return null;
+  };
+
   // Start Recording
   const startRecording = async () => {
     setError(null);
@@ -122,10 +170,17 @@ export default function VoiceRecorderWidget({
     audioChunksRef.current = [];
 
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setError('Your browser does not support voice recording (MediaRecorder API unavailable).');
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+        setError("Voice recording isn't supported in this browser — try Chrome or Safari's latest version");
         return;
       }
+
+      const supportedFormat = detectSupportedAudioMimeType();
+      if (!supportedFormat) {
+        setError("Voice recording isn't supported in this browser — try Chrome or Safari's latest version");
+        return;
+      }
+      setAudioFormat(supportedFormat);
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -145,21 +200,10 @@ export default function VoiceRecorderWidget({
         console.warn('AudioContext visualization initialization warning:', e);
       }
 
-      // Check supported MIME types
-      let mimeType = 'audio/webm;codecs=opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        if (MediaRecorder.isTypeSupported('audio/webm')) {
-          mimeType = 'audio/webm';
-        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-          mimeType = 'audio/ogg';
-        } else {
-          mimeType = ''; // Let browser choose default
-        }
-      }
-
-      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const mediaRecorder = new MediaRecorder(
+        stream,
+        supportedFormat.mimeType ? { mimeType: supportedFormat.mimeType } : undefined
+      );
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
@@ -169,7 +213,8 @@ export default function VoiceRecorderWidget({
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+        const actualMimeType = mediaRecorder.mimeType || supportedFormat.mimeType || 'audio/mp4';
+        const blob = new Blob(audioChunksRef.current, { type: actualMimeType });
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
@@ -248,6 +293,7 @@ export default function VoiceRecorderWidget({
     setRecordingState('idle');
     setDuration(0);
     setAudioBlob(null);
+    setAudioFormat(null);
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl(null);
     setError(null);
@@ -276,8 +322,13 @@ export default function VoiceRecorderWidget({
     setUploading(true);
 
     try {
+      const ext = audioFormat?.extension || (audioBlob.type.includes('mp4') || audioBlob.type.includes('aac') ? 'm4a' : 'webm');
+      const filename = `recording.${ext}`;
+      const actualMime = audioBlob.type || audioFormat?.mimeType || 'audio/mp4';
+
       const formData = new FormData();
-      formData.append('file', audioBlob, 'recording.webm');
+      formData.append('file', audioBlob, filename);
+      formData.append('mime_type', actualMime);
       formData.append('duration_seconds', String(duration));
       formData.append('recording_type', recordingType);
       if (remarks.trim()) {
