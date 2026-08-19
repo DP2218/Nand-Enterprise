@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Users, CalendarCheck,
   FileText, DollarSign, TrendingUp, BarChart3,
-  Calendar, FileCheck, CreditCard, Wallet,
+  Calendar, FileCheck, CreditCard, Wallet, Mic,
   X,
 } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
@@ -26,6 +26,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/leave', label: 'Leave Requests', icon: FileText },
   { href: '/salary', label: 'Salary', icon: DollarSign },
   { href: '/advances', label: 'Advances', icon: TrendingUp },
+  { href: '/voice-recordings', label: 'Voice Recordings', icon: Mic },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
 ];
 
@@ -35,6 +36,7 @@ const EMPLOYEE_NAV: NavItem[] = [
   { href: '/my-leave', label: 'My Leave', icon: FileCheck },
   { href: '/my-salary', label: 'My Salary', icon: CreditCard },
   { href: '/my-advances', label: 'My Advances', icon: Wallet },
+  { href: '/my-voice-recordings', label: 'Daily Voice Update', icon: Mic },
 ];
 
 interface SidebarProps {

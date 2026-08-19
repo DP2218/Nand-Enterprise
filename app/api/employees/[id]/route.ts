@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { getSessionFromRequest } from '@/lib/auth/session';
 import { updateEmployeeSchema } from '@/lib/validations/employee';
+import { hashPassword } from '@/lib/auth/password';
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   return NextResponse.json({ data: { ...employee, salary_setting: salarySetting ?? null } });
 }
 
-// PUT /api/employees/[id] — update employee details + salary settings
+// PUT /api/employees/[id] — update employee details + salary settings + optional password reset
 export async function PUT(request: NextRequest, { params }: Params) {
   const session = await getSessionFromRequest(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -52,18 +53,66 @@ export async function PUT(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const { salary_per_day, is_pf_enabled, pf_amount, ...empData } = parsed.data;
+  const { salary_per_day, is_pf_enabled, pf_amount, new_password, confirm_password, ...empData } = parsed.data;
   const supabase = createServerClient();
+
+  // If a new password was provided by admin, update the user account password_hash
+  if (new_password && new_password.trim().length > 0) {
+    if (new_password.trim().length < 6) {
+      return NextResponse.json({ error: 'New password must be at least 6 characters' }, { status: 400 });
+    }
+
+    const password_hash = await hashPassword(new_password.trim());
+    const { error: userError } = await supabase
+      .from('users')
+      .update({
+        password_hash,
+        must_change_pw: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('employee_id', id);
+
+    if (userError) {
+      console.error('[PUT /api/employees/[id]] user password update error:', userError);
+      return NextResponse.json({ error: 'Failed to reset employee password' }, { status: 500 });
+    }
+
+    // Set audit fields on employee payload
+    (empData as any).password_reset_at = new Date().toISOString();
+    (empData as any).password_reset_by = session.username;
+  }
 
   // Update employee record if employee fields were provided
   if (Object.keys(empData).length > 0) {
-    const { error: empError } = await supabase
+    let { error: empError } = await supabase
       .from('employees')
       .update(empData)
       .eq('id', id);
 
+    // Fallback: If audit columns password_reset_at / password_reset_by are missing in DB schema cache (PGRST204),
+    // strip them and retry so the update completes cleanly.
+    if (
+      empError &&
+      empError.code === 'PGRST204' &&
+      (empError.message.includes('password_reset_at') || empError.message.includes('password_reset_by'))
+    ) {
+      console.warn('[PUT /api/employees/[id]] Audit columns missing in schema cache, retrying update without audit columns.');
+      delete (empData as any).password_reset_at;
+      delete (empData as any).password_reset_by;
+
+      if (Object.keys(empData).length > 0) {
+        const retryResult = await supabase
+          .from('employees')
+          .update(empData)
+          .eq('id', id);
+        empError = retryResult.error;
+      } else {
+        empError = null;
+      }
+    }
+
     if (empError) {
-      console.error('[PUT /api/employees/[id]] employee update', empError);
+      console.error('[PUT /api/employees/[id]] employee update error:', empError);
       return NextResponse.json({ error: empError.message || 'Failed to update employee' }, { status: 500 });
     }
   }

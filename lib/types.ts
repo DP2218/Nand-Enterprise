@@ -42,6 +42,9 @@ export interface Employee {
   joining_date: string;
   address: string | null;
   status: EmployeeStatus;
+  voice_recording_enabled: boolean;
+  password_reset_at?: string | null;
+  password_reset_by?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -54,6 +57,7 @@ export interface CreateEmployeeInput {
   joining_date: string;
   address?: string;
   password?: string;
+  voice_recording_enabled?: boolean;
 }
 
 export interface UpdateEmployeeInput {
@@ -64,7 +68,32 @@ export interface UpdateEmployeeInput {
   joining_date?: string;
   address?: string;
   status?: EmployeeStatus;
+  voice_recording_enabled?: boolean;
+  new_password?: string;
+  confirm_password?: string;
 }
+
+// ─── Voice Recording ───────────────────────────────────────
+export interface VoiceRecording {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  file_name: string;
+  file_url: string;
+  duration_seconds: number;
+  file_size: number;
+  recording_type: string;
+  remarks: string | null;
+  created_at: string;
+  employee?: Employee;
+  signedUrl?: string;
+}
+
+export interface CreateVoiceRecordingInput {
+  recording_type?: string;
+  remarks?: string;
+}
+
 
 // ─── Attendance ────────────────────────────────────────────
 export interface Attendance {

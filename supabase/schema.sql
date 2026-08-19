@@ -31,6 +31,9 @@ CREATE TABLE employees (
   joining_date      DATE NOT NULL DEFAULT CURRENT_DATE,
   address           TEXT,
   status            employee_status NOT NULL DEFAULT 'active',
+  voice_recording_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  password_reset_at TIMESTAMPTZ,
+  password_reset_by TEXT,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -131,6 +134,20 @@ CREATE TABLE advance_adjustments (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Voice recordings table
+CREATE TABLE voice_recordings (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id       UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  employee_name     TEXT NOT NULL,
+  file_name         TEXT NOT NULL,
+  file_url          TEXT NOT NULL,
+  duration_seconds  INTEGER NOT NULL,
+  file_size         BIGINT NOT NULL,
+  recording_type    TEXT NOT NULL DEFAULT 'daily_update',
+  remarks           TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -143,6 +160,8 @@ CREATE INDEX idx_salary_payments_employee ON salary_payments(employee_id);
 CREATE INDEX idx_salary_payments_month_year ON salary_payments(salary_month, salary_year);
 CREATE INDEX idx_salary_advances_employee ON salary_advances(employee_id);
 CREATE INDEX idx_users_employee ON users(employee_id);
+CREATE INDEX idx_voice_recordings_employee ON voice_recordings(employee_id);
+CREATE INDEX idx_voice_recordings_created_at ON voice_recordings(created_at);
 
 -- ============================================================
 -- UPDATED_AT TRIGGER
@@ -193,6 +212,7 @@ ALTER TABLE salary_settings   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE salary_advances   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE salary_payments   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE advance_adjustments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE voice_recordings  ENABLE ROW LEVEL SECURITY;
 
 -- Service role bypasses RLS — grant full access
 CREATE POLICY "service_role_all_employees" ON employees
@@ -218,6 +238,37 @@ CREATE POLICY "service_role_all_payments" ON salary_payments
 
 CREATE POLICY "service_role_all_adjustments" ON advance_adjustments
   USING (auth.role() = 'service_role');
+
+CREATE POLICY "service_role_all_voice_recordings" ON voice_recordings
+  USING (auth.role() = 'service_role');
+
+CREATE POLICY "employees_select_own_voice_recordings" ON voice_recordings
+  FOR SELECT USING (
+    employee_id IN (
+      SELECT employee_id FROM users WHERE id = auth.uid()
+    )
+  );
+
+CREATE POLICY "employees_insert_own_voice_recordings" ON voice_recordings
+  FOR INSERT WITH CHECK (
+    employee_id IN (
+      SELECT employee_id FROM users WHERE id = auth.uid()
+    )
+  );
+
+CREATE POLICY "admins_select_all_voice_recordings" ON voice_recordings
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+CREATE POLICY "admins_delete_all_voice_recordings" ON voice_recordings
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
 
 -- ============================================================
 -- SEED DATA

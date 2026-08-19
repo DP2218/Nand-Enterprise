@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     const {
       full_name, phone, department, designation, joining_date, address, password,
-      salary_per_day, is_pf_enabled, pf_amount
+      salary_per_day, is_pf_enabled, pf_amount, voice_recording_enabled
     } = parsed.data;
 
     // Generate employee number
@@ -72,7 +72,16 @@ export async function POST(request: NextRequest) {
     // Insert employee
     const { data: employee, error: empError } = await supabase
       .from('employees')
-      .insert({ employee_number, full_name, phone, department, designation, joining_date, address })
+      .insert({
+        employee_number,
+        full_name,
+        phone,
+        department,
+        designation,
+        joining_date,
+        address,
+        voice_recording_enabled: Boolean(voice_recording_enabled),
+      })
       .select()
       .single();
 

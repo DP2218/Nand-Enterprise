@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Search, Edit2, UserX, Users, IndianRupee, ShieldCheck, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, UserX, Users, IndianRupee, ShieldCheck, Trash2, Mic, Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -26,6 +26,9 @@ export default function EmployeesPage() {
   const [editEmployee, setEditEmployee] = useState<ExtendedEmployee | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -42,6 +45,7 @@ export default function EmployeesPage() {
       salary_per_day: 0,
       is_pf_enabled: false,
       pf_amount: 0,
+      voice_recording_enabled: false,
     },
   });
 
@@ -101,6 +105,7 @@ export default function EmployeesPage() {
         salary_per_day: 0,
         is_pf_enabled: false,
         pf_amount: 0,
+        voice_recording_enabled: false,
       });
       fetchEmployees();
     } catch (err) {
@@ -121,6 +126,15 @@ export default function EmployeesPage() {
       });
       const json = await res.json();
       if (!res.ok) { setError(json.error || 'Failed to update employee'); return; }
+      
+      const empName = editEmployee.full_name;
+      const pwdWasReset = Boolean(data.new_password && data.new_password.trim().length > 0);
+      setSuccessMsg(
+        pwdWasReset
+          ? `✓ Employee details & password updated for ${empName}`
+          : `✓ Employee details updated for ${empName}`
+      );
+      
       setEditEmployee(null);
       fetchEmployees();
     } catch (err) {
@@ -151,6 +165,8 @@ export default function EmployeesPage() {
   const openEdit = (emp: ExtendedEmployee) => {
     setEditEmployee(emp);
     setError('');
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
     editForm.reset({
       full_name: emp.full_name,
       phone: emp.phone,
@@ -162,6 +178,9 @@ export default function EmployeesPage() {
       salary_per_day: emp.salary_setting?.salary_per_day ?? 0,
       is_pf_enabled: emp.salary_setting?.is_pf_enabled ?? false,
       pf_amount: emp.salary_setting?.pf_amount ?? 0,
+      voice_recording_enabled: emp.voice_recording_enabled ?? false,
+      new_password: '',
+      confirm_password: '',
     });
   };
 
@@ -179,6 +198,7 @@ export default function EmployeesPage() {
       salary_per_day: 0,
       is_pf_enabled: false,
       pf_amount: 0,
+      voice_recording_enabled: false,
     });
   };
 
@@ -204,6 +224,16 @@ export default function EmployeesPage() {
       </div>
 
       {/* Search */}
+      {successMsg && (
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+          <button onClick={() => setSuccessMsg('')} className="text-emerald-600 hover:text-emerald-800">×</button>
+        </div>
+      )}
+
       <div className="relative max-w-sm">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
@@ -221,7 +251,7 @@ export default function EmployeesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100">
-                {['Emp No.', 'Name', 'Department', 'Phone', 'Daily Rate', 'PF Status', 'Status', 'Actions']
+                {['Emp No.', 'Name', 'Department', 'Phone', 'Daily Rate', 'PF Status', 'Voice Access', 'Status', 'Actions']
                   .map((h) => (
                     <th key={h} className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
                       {h}
@@ -256,6 +286,15 @@ export default function EmployeesPage() {
                           </span>
                         ) : (
                           <span className="text-xs text-slate-400">No PF</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        {emp.voice_recording_enabled ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                            <Mic size={12} /> Enabled
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">Disabled</span>
                         )}
                       </td>
                       <td className="py-3 px-3"><StatusBadge status={emp.status} /></td>
@@ -374,6 +413,18 @@ export default function EmployeesPage() {
                   />
                 </div>
               )}
+
+              <div className="sm:col-span-2 flex items-center gap-3 py-2 border-t border-slate-200/60 pt-3 mt-1">
+                <input
+                  type="checkbox"
+                  id="add_voice_recording_enabled"
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                  {...createForm.register('voice_recording_enabled')}
+                />
+                <label htmlFor="add_voice_recording_enabled" className="text-sm font-medium text-slate-700 cursor-pointer flex items-center gap-1.5">
+                  <Mic size={16} className="text-blue-600" /> Enable Voice Recording Access
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -460,6 +511,66 @@ export default function EmployeesPage() {
                   />
                 </div>
               )}
+
+              <div className="sm:col-span-2 flex items-center gap-3 py-2 border-t border-slate-200/60 pt-3 mt-1">
+                <input
+                  type="checkbox"
+                  id="edit_voice_recording_enabled"
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                  {...editForm.register('voice_recording_enabled')}
+                />
+                <label htmlFor="edit_voice_recording_enabled" className="text-sm font-medium text-slate-700 cursor-pointer flex items-center gap-1.5">
+                  <Mic size={16} className="text-blue-600" /> Enable Voice Recording Access
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-200">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-3">
+              <Lock size={14} className="text-slate-600" /> Reset Password (Optional)
+            </h3>
+            <div className="space-y-3 bg-slate-50/80 p-4 rounded-xl border border-slate-200">
+              <p className="text-xs text-slate-500">
+                Leave blank to keep existing password unchanged. Fill in to reset login password for this employee.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative">
+                  <Input
+                    label="New Password"
+                    type={showNewPassword ? 'text' : 'password'}
+                    placeholder="Min. 6 characters"
+                    error={editForm.formState.errors.new_password?.message}
+                    {...editForm.register('new_password')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-9 text-slate-400 hover:text-slate-600"
+                    title={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <Input
+                    label="Confirm New Password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Re-enter new password"
+                    error={editForm.formState.errors.confirm_password?.message}
+                    {...editForm.register('confirm_password')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-9 text-slate-400 hover:text-slate-600"
+                    title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
